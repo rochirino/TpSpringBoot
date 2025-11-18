@@ -2,10 +2,12 @@ package com.utn.productos_api.service;
 
 
 
-import com.utn.productos_api.model.Categoria;
-import com.utn.productos_api.model.Producto;
-import com.utn.productos_api.repository.ProductoRepository;
 import com.utn.productos_api.exception.ProductoNotFoundException;
+import com.utn.productos_api.exception.StockInsuficienteException;
+import com.utn.productos_api.model.Producto;
+import com.utn.productos_api.model.Categoria;
+import com.utn.productos_api.repository.ProductoRepository;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,62 +16,68 @@ import java.util.Optional;
 @Service
 public class ProductoService {
 
-    private final ProductoRepository productoRepository;
+    private final ProductoRepository repository;
 
-    // Inyección por constructor (como pide la consigna)
-    public ProductoService(ProductoRepository productoRepository) {
-        this.productoRepository = productoRepository;
+    public ProductoService(ProductoRepository repository) {
+        this.repository = repository;
     }
 
     // Crear producto
     public Producto crearProducto(Producto producto) {
-        return productoRepository.save(producto);
+        return repository.save(producto);
     }
 
-    // Obtener todos los productos
+    // Obtener todos
     public List<Producto> obtenerTodos() {
-        return productoRepository.findAll();
+        return repository.findAll();
     }
 
-    // Obtener por ID → retorna Optional (como pide la consigna)
+    // Obtener por ID
     public Optional<Producto> obtenerPorId(Long id) {
-        return productoRepository.findById(id);
+        return repository.findById(id);
     }
 
     // Obtener por categoría
     public List<Producto> obtenerPorCategoria(Categoria categoria) {
-        return productoRepository.findByCategoria(categoria);
+        return repository.findByCategoria(categoria);
     }
 
     // Actualizar producto completo
     public Producto actualizarProducto(Long id, Producto productoActualizado) {
-        Producto existente = productoRepository.findById(id)
+
+        Producto productoExistente = repository.findById(id)
                 .orElseThrow(() -> new ProductoNotFoundException(id));
 
-        // Actualizar campos
-        existente.setNombre(productoActualizado.getNombre());
-        existente.setDescripcion(productoActualizado.getDescripcion());
-        existente.setPrecio(productoActualizado.getPrecio());
-        existente.setStock(productoActualizado.getStock());
-        existente.setCategoria(productoActualizado.getCategoria());
+        productoExistente.setNombre(productoActualizado.getNombre());
+        productoExistente.setDescripcion(productoActualizado.getDescripcion());
+        productoExistente.setPrecio(productoActualizado.getPrecio());
+        productoExistente.setStock(productoActualizado.getStock());
+        productoExistente.setCategoria(productoActualizado.getCategoria());
 
-        return productoRepository.save(existente);
+        return repository.save(productoExistente);
     }
 
     // Actualizar solo el stock
     public Producto actualizarStock(Long id, Integer nuevoStock) {
-        Producto existente = productoRepository.findById(id)
+
+        Producto productoExistente = repository.findById(id)
                 .orElseThrow(() -> new ProductoNotFoundException(id));
 
-        existente.setStock(nuevoStock);
-        return productoRepository.save(existente);
+        if (nuevoStock < 0) {
+            throw new StockInsuficienteException("El stock no puede ser negativo");
+
+        }
+
+        productoExistente.setStock(nuevoStock);
+        return repository.save(productoExistente);
     }
 
-    // Eliminar producto
+    // Eliminar producto por ID
     public void eliminarProducto(Long id) {
-        if (!productoRepository.existsById(id)) {
-            throw new ProductoNotFoundException(id);
-        }
-        productoRepository.deleteById(id);
+
+        Producto productoExistente = repository.findById(id)
+                .orElseThrow(() -> new ProductoNotFoundException(id));
+
+        repository.delete(productoExistente);
     }
 }
